@@ -21,8 +21,8 @@ turn = True # True if player's turn, False if computer's turn
 chances = 0 # Number of chances to answer another player's face card (0 means that one is not in play)
 
 # Global variables to represent the settings chosen by the players
-divorce = False
-marriage = False
+divorce = False # Allows slapping on a king and queen separated by one card
+marriage = False # Allows slapping on a king on top of a queen or vice versa
 difficulty = 1
 
 # Global boolean variables to represent if a deck can be slapped
