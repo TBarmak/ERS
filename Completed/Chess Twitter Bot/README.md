@@ -7,7 +7,11 @@ understanding your moves. Each user can only be playing one game at a time. If y
 tweeting #startgame will erase your progress from the previous game and start a new one. Good luck!
 
 Useful hashtags:
+
 #resign - you might have to use this one a lot ;)
+
 #possiblemoves - I'll reply with a list of possible moves in the position
+
 #getpgn - I'll reply with the move history of the current game in pgn notation
+
 #error - will help my creator make sure I'm functioning properly
