@@ -2,7 +2,7 @@
 Taylor Barmak
 
 Program will create a valid 9x9 sudoku before asking the user for a difficulty level.
-The higher the difficulty level, the move numbers that will be removed.
+The higher the difficulty level, the more numbers that will be removed.
 After creating the final sudoku, it will be exported to an excel file.
 """
 # Imports
