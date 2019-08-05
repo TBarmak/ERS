@@ -21,8 +21,8 @@ turn = True # True if player's turn, False if computer's turn
 chances = 0 # Number of chances to answer another player's face card (0 means that one is not in play)
 
 # Global variables to represent the settings chosen by the players
-divorce = False # Allows slapping on a king and queen separated by one card
-marriage = False # Allows slapping on a king on top of a queen or vice versa
+divorce = False
+marriage = False
 difficulty = 1
 
 # Global boolean variables to represent if a deck can be slapped
@@ -60,6 +60,11 @@ def start_game():
     global chances
     global is_slappable
     global was_slappable
+    global info
+
+    # Destroy the info label
+    info.config(text='Click "Deal Card" to start play.')
+
     # Create a deck of cards and deal them to the players
     deck = create_deck()
     player_pile = deck[::2]
@@ -119,6 +124,7 @@ def set_chances(card):
     # Global variables
     global chances
     global turn
+    global info
     # Set the value if a face card has been played
     if is_face(card):
         value = card[0]
@@ -130,13 +136,29 @@ def set_chances(card):
             chances = 3
         elif value == 'A':
             chances = 4
+        # Update the info label to let the player know what's going on
+        if turn:
+            player = "Computer has "
+        else:
+            player = "You have "
+        message = player + str(chances) + " chance(s) to play a FoA"
+        info.config(text=message)
         # It becomes the other player's turn
         turn = not turn
     # Otherwise, only decrement chances if a player did not play a face card
     elif chances != 0:
+        print("Chances: " + str(chances))
         chances -= 1
+        # Update the info label to let the player know what's going on
+        if turn:
+            player = "You have "
+        else:
+            player = "Computer has "
+        message = player + str(chances) + " chance(s) to play a FoA"
+        info.config(text=message)
         # If the chances drops to zero, the pile goes to the player whose turn it is not
         if chances == 0:
+            print("Chances: " + str(chances))
             take_pile(not turn)
     # If nothing special has happened with face cards, it becomes the other player's turn
     else:
@@ -183,6 +205,8 @@ def take_pile(player):
     global player_pile
     global comp_pile
     global turn
+    global chances
+    chances = 0
     # If the player is getting the pile, transfer the slap_pile cards to them and make it their turn
     if player:
         print("The player took the pile.")
@@ -221,6 +245,10 @@ def deal_card(player):
     global slap_pile
     global is_slappable
     global was_slappable
+    global info
+
+    # Clear the text from the info label
+    info.config(text="")
     # If the person who's turn it is and the person who is trying to deal a card match, execute the method
     if player == turn:
         # Reset the slappable variables to False when a new card is dealt
@@ -264,6 +292,34 @@ def deal_card(player):
                 # Have the computer attempt to deal a card three seconds after they are given the chance to
                 root.after(1500, lambda: deal_card(False))
 
+"""
+create_the_gui will create the game after the user has read the instructions
+"""
+def create_the_gui():
+    global understood
+    global instructions
+    global title
+
+    # Destroy the instructions screen
+    title.destroy()
+    instructions.destroy()
+    understood.destroy()
+
+    # Images for the card back and front
+    back_photo = PhotoImage(file='back.png').subsample(back_img_multiplier, back_img_multiplier)
+    card_photo = PhotoImage(file='placeholder.png').zoom(card_img_multiplier, card_img_multiplier)
+
+    comp_pile_image.grid(column=0, row=0, rowspan=2)
+    slap_top_image.grid(column=1, row=1, rowspan=2)
+    player_pile_image.grid(column=2, row=2, rowspan=2)
+    difficulty_slider.grid(column=3, row=1)
+    divorce_checkbox.grid(row=0, column=3)
+    marriage_checkbox.grid(row=0, column=4)
+    start.grid(row=1, column=4)
+    slap_button.grid(row=2, column=3, columnspan=5)
+    deal.grid(row=3, column=3, columnspan=5)
+    info.grid(row=0, column=1)
+
 # Create the GUI
 root = Tk()
 root.title("ERS")
@@ -278,45 +334,51 @@ gui_width = round(gui_height * aspect_ratio)
 root.geometry(str(gui_width) + "x" + str(gui_height))
 
 # These multipliers will get the image heights close to 1/4 the screen height
-back_img_multiplier = round((2*1040)/gui_height)
-card_img_multiplier = round(1/(2*98/gui_height))
+back_img_multiplier = round((2 * 1040) / gui_height)
+card_img_multiplier = round(1 / (2 * 98 / gui_height))
 
+'''
+Instruction screen: 
+'''
+title = Label(root, text="Egyptian Rat Screw", font=("Serif", 24))
+title.grid(row=0, column=2, rowspan=3)
+
+f = open("instructions.txt", "r")
+instructions_string = ''
+for line in f:
+    instructions_string += line
+f.close()
+
+instructions = Label(root, text=instructions_string, justify="left", padx=10)
+instructions.grid(row=4, column=0, rowspan=5, columnspan=5)
+
+understood = Button(root, text="I understand.", command=create_the_gui)
+understood.grid(row=9, column=2)
+
+'''
+Elements to appear on GUI after the user indicates that the understand the rules of the game
+'''
 # Images for the card back and front
 back_photo = PhotoImage(file='back.png').subsample(back_img_multiplier, back_img_multiplier)
 card_photo = PhotoImage(file='placeholder.png').zoom(card_img_multiplier, card_img_multiplier)
-
 # Label for the comp pile
 comp_pile_image = Label(root, image=back_photo)
-comp_pile_image.grid(column=0, row=0, rowspan=2)
-
 # Label for the slap pile
 slap_top_image = Label(root, image=card_photo)
-slap_top_image.grid(column=1, row=1, rowspan=2)
-
 # Label for the player pile
 player_pile_image = Label(root, image=back_photo)
-player_pile_image.grid(column=2, row=2, rowspan=2)
-
 # Slider for the difficulty
 difficulty_slider = Scale(root, from_=1, to=10, length=round(gui_width/5), cursor='tcross', orient='horizontal', label='Difficulty')
-difficulty_slider.grid(column=3, row=1)
-
 # Checkboxes for divorce and marriage
 divorce_checkbox = ttk.Checkbutton(root, text="Divorce")
-divorce_checkbox.grid(row=0, column=3)
 marriage_checkbox = ttk.Checkbutton(root, text="Marriage")
-marriage_checkbox.grid(row=0, column=4)
-
 # Button to start the game
 start = Button(root, text="Start Game", command=start_game)
-start.grid(row=1, column=4)
-
 # Button to slap
 slap_button = Button(root, text="Slap", height=5, width=40, command=lambda: slap(True))
-slap_button.grid(row=2, column=3, columnspan=5)
-
 # Button to deal a card
 deal = Button(root, text="Deal", height=5, width=40, command=lambda: deal_card(True))
-deal.grid(row=3, column=3, columnspan=5)
+# Label to indicate what is going on
+info = Label(root, text="Click 'Start Game' to start a game.")
 
 root.mainloop()
