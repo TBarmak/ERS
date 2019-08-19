@@ -5,7 +5,7 @@ a card face up to the "slap pile". The players will alternate dealing cards face
     When a FoA is played, the next player must play another FoA. The player will deal cards until they have run out of chances or they have
 played another FoA. If the next player does not play a FoA in the number of chances they are given, the pile goes to the person who played
 the FoA. The number of chances to play a FoA is determined by the value of the FoA played. If a Jack is played, the next player has 1 chance
-to play a FoA. Q = 2, K = 3, A = 4. If a player successfully plays a FoA in their number of chances, the next player is then required to play
+to play a FoA. J = 1, Q = 2, K = 3, A = 4. If a player successfully plays a FoA in their number of chances, the next player is then required to play
 a FoA. This continues until somebody fails to play a FoA in their number of chances, in which case the pile will go to the player who played
 the most recent face card.
 
