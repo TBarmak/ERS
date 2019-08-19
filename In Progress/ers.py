@@ -4,9 +4,9 @@ A GUI to play Egyptian Rat Screw against the computer
 
 Rules of ERS: https://bicyclecards.com/how-to-play/egyptian-rat-screw/
 
-To-Do:
-- Ending the game/Declaring a winner and loser
-- Make UI more intuitive
+To do:
+- Indicate the thickness of the piles throughout the game
+- Improve the aesthetic
 """
 # Imports
 import random
@@ -19,6 +19,7 @@ comp_pile = []
 slap_pile = []
 turn = True # True if player's turn, False if computer's turn
 chances = 0 # Number of chances to answer another player's face card (0 means that one is not in play)
+setting_blank = False # Variable to stop the dealing of cards while the slap pile is being taken
 
 # Global variables to represent the settings chosen by the players
 divorce = False
@@ -60,25 +61,27 @@ def start_game():
     global chances
     global is_slappable
     global was_slappable
-    global info
 
-    # Destroy the info label
-    info.config(text='Click "Deal Card" to start play.')
+    # Update the info label
+    info.config(text='Click "Deal" \nto start play.')
 
     # Create a deck of cards and deal them to the players
     deck = create_deck()
     player_pile = deck[::2]
     comp_pile = deck[1::2]
+
     # Change the settings of the game based on the checkboxes
     if 'selected' in divorce_checkbox.state():
         marriage = True
     if 'selected' in marriage_checkbox.state():
         divorce = True
     difficulty = difficulty_slider.get()
+
     # Reset chances, is_slappable, and was_slappable
     chances = 0
     is_slappable = False
     was_slappable = False
+
 """
 check_slappable will take a pile as an argument and return true if it can be slapped
 return True if it can be slapped, False otherwise
@@ -124,7 +127,7 @@ def set_chances(card):
     # Global variables
     global chances
     global turn
-    global info
+
     # Set the value if a face card has been played
     if is_face(card):
         value = card[0]
@@ -141,28 +144,32 @@ def set_chances(card):
             player = "Computer has "
         else:
             player = "You have "
-        message = player + str(chances) + " chance(s) to play a FoA"
+        message = player + str(chances) + " chance(s)\n to play a FoA"
         info.config(text=message)
         # It becomes the other player's turn
         turn = not turn
     # Otherwise, only decrement chances if a player did not play a face card
     elif chances != 0:
-        print("Chances: " + str(chances))
         chances -= 1
         # Update the info label to let the player know what's going on
         if turn:
             player = "You have "
         else:
             player = "Computer has "
-        message = player + str(chances) + " chance(s) to play a FoA"
+        message = player + str(chances) + " chance(s)\n to play a FoA"
         info.config(text=message)
         # If the chances drops to zero, the pile goes to the player whose turn it is not
         if chances == 0:
-            print("Chances: " + str(chances))
             take_pile(not turn)
     # If nothing special has happened with face cards, it becomes the other player's turn
     else:
         turn = not turn
+    # If it's a player's turn and they are out of cards, have the other player take the cards
+    if turn and len(player_pile) == 0:
+        take_pile(False)
+    elif not turn and len(comp_pile) == 0:
+        take_pile(True)
+
 """
 slap will attempt to slap a pile
 player - True if the player is trying to slap, False if the computer is trying to slap
@@ -180,18 +187,21 @@ def slap(player):
         # Reset chances
         chances = 0
         take_pile(player)
+        if player:
+            info.config(text='Player slapped\n first.')
+        else:
+            info.config(text='Computer slapped\n first.')
     # If the pile was slappable, there's no penalty
     elif was_slappable:
-        print("No penalty")
         pass
     # Otherwise, the player has to burn a card
     else:
         if player:
-            print("Player burned a card.")
+            info.config(text='Player burned\n a card.')
             slap_pile.insert(0, player_pile[0])
             player_pile = player_pile[1:]
         else:
-            print("Computer burned a card.")
+            info.config(text='Computer burned\n a card.')
             slap_pile.insert(0, comp_pile[0])
             comp_pile = comp_pile[1:]
 
@@ -206,32 +216,55 @@ def take_pile(player):
     global comp_pile
     global turn
     global chances
+    global setting_blank
     chances = 0
     # If the player is getting the pile, transfer the slap_pile cards to them and make it their turn
     if player:
-        print("The player took the pile.")
         for card in slap_pile:
             player_pile.append(card)
         slap_pile = []
         turn = True
     # If the computer is getting the pile, transfer the slap_pile cards to them and make it their turn
     else:
-        print("The computer took the pile.")
         for card in slap_pile:
             comp_pile.append(card)
         slap_pile = []
         turn = False
     # Set the top card to blank to visually show that the pile was taken
-    root.after(1500, set_card_blank)
+    setting_blank = True
+    root.after(700, show_hand)
+
+"""
+show_hand method will flash a robot hand or human hand to visually show the pile being taken
+"""
+def show_hand():
+    if turn:
+        file_name = 'human_hand.png'
+    else:
+        file_name = 'robot_hand.png'
+    hand = PhotoImage(file=file_name).subsample(back_img_multiplier, back_img_multiplier)
+    slap_top_image.configure(image=hand)
+    slap_top_image.image = hand
+    # If a player is left with no cards after the pile is taken, declare a winner
+    if len(player_pile) == 0:
+        root.after(750, declare_winner(False))
+    elif len(comp_pile) == 0:
+        root.after(750, declare_winner(True))
+    else:
+        root.after(1200, set_card_blank)
 
 """
 set_card_blank changes the image of the slap pile to be a blank card
 """
 def set_card_blank():
+    global setting_blank
     card_photo = PhotoImage(file='placeholder.png').zoom(card_img_multiplier, card_img_multiplier)
     slap_top_image.configure(image=card_photo)
     slap_top_image.image = card_photo
-    root.after(2000, lambda: deal_card(False))
+    # Allow cards to be dealt
+    setting_blank = False
+    if not turn:
+        root.after(2000, lambda: deal_card(False))
 
 """
 deal_card method will have a player deal a card to the slap pile
@@ -245,12 +278,12 @@ def deal_card(player):
     global slap_pile
     global is_slappable
     global was_slappable
-    global info
 
     # Clear the text from the info label
     info.config(text="")
+
     # If the person who's turn it is and the person who is trying to deal a card match, execute the method
-    if player == turn:
+    if player == turn and not setting_blank:
         # Reset the slappable variables to False when a new card is dealt
         is_slappable = False
         was_slappable = False
@@ -259,47 +292,55 @@ def deal_card(player):
             if len(player_pile) > 0:
                 slap_pile.append(player_pile[0])
                 player_pile = player_pile[1:]
-                print("Player played: " + slap_pile[-1])
-            else:
-                pass
-                """
-                The player loses...
-                """
         # If it's the computer's turn, have them deal a card
         else:
             if len(comp_pile) > 0:
                 slap_pile.append(comp_pile[0])
                 comp_pile = comp_pile[1:]
-                print("Computer played: " + slap_pile[-1])
         # Change the image on the slap pile
         card_photo = PhotoImage(file='cards\\' + slap_pile[-1].lower() + '.png').zoom(card_img_multiplier, card_img_multiplier)
         slap_top_image.configure(image=card_photo)
         slap_top_image.image = card_photo
         # Check if the pile has become slappable
         if check_slappable():
-            print("The pile is slappable.")
+            # Don't clear the text of the info label if face cards are in play
+            if chances != 0:
+                if turn:
+                    player = "You have "
+                else:
+                    player = "Computer has "
+                message = player + str(chances) + " chance(s)\n to play a FoA"
+                info.config(text=message)
             is_slappable = True
             was_slappable = True
             # Make the computer slap quicker when the difficulty is harder
             time = 0.1*((-1 * difficulty) + 5) + 1
-            print(time)
             root.after(int(time * 1000), lambda: slap(False))
-        else:
-            # Change the global turn variable
-            set_chances(slap_pile[-1])
-            # If it has become the computer's turn, have them deal a card
-            if not turn and len(slap_pile) > 0:
-                # Have the computer attempt to deal a card three seconds after they are given the chance to
-                root.after(1500, lambda: deal_card(False))
+        # Change the global turn variable and adjust chances
+        set_chances(slap_pile[-1])
+
+        # If it has become the computer's turn, have them deal a card
+        if not turn:
+            # Have the computer attempt to deal a card three seconds after they are given the chance to
+            root.after(1500, lambda: deal_card(False))
+
+"""
+declare_winner will have the GUI show who won
+winner - True if the player won, False if the computer won
+"""
+def declare_winner(winner):
+    destroy_the_gui()
+    if winner:
+        message = "Congratulations, you won!"
+    else:
+        message = "The computer is victorious!"
+    winner_label = Label(text=message, font=("Serif", 30))
+    winner_label.grid()
 
 """
 create_the_gui will create the game after the user has read the instructions
 """
 def create_the_gui():
-    global understood
-    global instructions
-    global title
-
     # Destroy the instructions screen
     title.destroy()
     instructions.destroy()
@@ -319,6 +360,21 @@ def create_the_gui():
     slap_button.grid(row=2, column=3, columnspan=5)
     deal.grid(row=3, column=3, columnspan=5)
     info.grid(row=0, column=1)
+
+"""
+destroy_the_gui will clear all of the items on the gui
+"""
+def destroy_the_gui():
+    comp_pile_image.destroy()
+    slap_top_image.destroy()
+    player_pile_image.destroy()
+    difficulty_slider.destroy()
+    divorce_checkbox.destroy()
+    marriage_checkbox.destroy()
+    start.destroy()
+    slap_button.destroy()
+    deal.destroy()
+    info.destroy()
 
 # Create the GUI
 root = Tk()
@@ -379,6 +435,6 @@ slap_button = Button(root, text="Slap", height=5, width=40, command=lambda: slap
 # Button to deal a card
 deal = Button(root, text="Deal", height=5, width=40, command=lambda: deal_card(True))
 # Label to indicate what is going on
-info = Label(root, text="Click 'Start Game' to start a game.")
+info = Label(root, text="Click 'Start Game'\n to start a game.")
 
 root.mainloop()
