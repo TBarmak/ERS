@@ -5,7 +5,6 @@ A GUI to play Egyptian Rat Screw against the computer
 Rules of ERS: https://bicyclecards.com/how-to-play/egyptian-rat-screw/
 
 To do:
-- Indicate the thickness of the piles throughout the game
 - Improve the aesthetic
 """
 # Imports
@@ -61,6 +60,7 @@ def start_game():
     global chances
     global is_slappable
     global was_slappable
+    global turn
 
     # Update the info label
     info.config(text='Click "Deal" \nto start play.')
@@ -78,9 +78,12 @@ def start_game():
     difficulty = difficulty_slider.get()
 
     # Reset chances, is_slappable, and was_slappable
+    turn = True
     chances = 0
     is_slappable = False
     was_slappable = False
+
+    set_card_blank()
 
 """
 check_slappable will take a pile as an argument and return true if it can be slapped
@@ -127,6 +130,7 @@ def set_chances(card):
     # Global variables
     global chances
     global turn
+    global setting_blank
 
     # Set the value if a face card has been played
     if is_face(card):
@@ -160,15 +164,19 @@ def set_chances(card):
         info.config(text=message)
         # If the chances drops to zero, the pile goes to the player whose turn it is not
         if chances == 0:
-            take_pile(not turn)
+            # Prevent cards from being dealt, but allow the pile to be slapped
+            setting_blank = True
+            if not is_slappable:
+                take_pile(not turn)
     # If nothing special has happened with face cards, it becomes the other player's turn
     else:
         turn = not turn
     # If it's a player's turn and they are out of cards, have the other player take the cards
-    if turn and len(player_pile) == 0:
-        take_pile(False)
-    elif not turn and len(comp_pile) == 0:
-        take_pile(True)
+    # Allow for the pile to be slapped, if possible
+    if (turn and len(player_pile) == 0) or (not turn and len(comp_pile) == 0):
+        setting_blank = True
+        if not is_slappable:
+            take_pile(not turn)
 
 """
 slap will attempt to slap a pile
@@ -232,7 +240,7 @@ def take_pile(player):
         turn = False
     # Set the top card to blank to visually show that the pile was taken
     setting_blank = True
-    root.after(700, show_hand)
+    root.after(200, show_hand)
 
 """
 show_hand method will flash a robot hand or human hand to visually show the pile being taken
@@ -251,7 +259,7 @@ def show_hand():
     elif len(comp_pile) == 0:
         root.after(750, declare_winner(True))
     else:
-        root.after(1200, set_card_blank)
+        root.after(1400, set_card_blank)
 
 """
 set_card_blank changes the image of the slap pile to be a blank card
@@ -287,6 +295,7 @@ def deal_card(player):
         # Reset the slappable variables to False when a new card is dealt
         is_slappable = False
         was_slappable = False
+
         # If it's the player's turn, have them deal a card
         if turn:
             if len(player_pile) > 0:
@@ -297,6 +306,30 @@ def deal_card(player):
             if len(comp_pile) > 0:
                 slap_pile.append(comp_pile[0])
                 comp_pile = comp_pile[1:]
+
+        # Update the back image to reflect the thickness of the piles
+        if len(player_pile) <= 10:
+            player_thickness = 'thin'
+        elif len(player_pile) <= 20:
+            player_thickness = 'medium'
+        else:
+            player_thickness = 'thick'
+
+        if len(comp_pile) <= 10:
+            comp_thickness = 'thin'
+        elif len(comp_pile) <= 20:
+            comp_thickness = 'medium'
+        else:
+            comp_thickness = 'thick'
+
+        player_back = PhotoImage(file='back-' + player_thickness + '.png').subsample(back_img_multiplier, back_img_multiplier)
+        player_pile_image.configure(image=player_back)
+        player_pile_image.image = player_back
+
+        comp_back = PhotoImage(file='back-' + comp_thickness + '.png').subsample(back_img_multiplier, back_img_multiplier)
+        comp_pile_image.configure(image=comp_back)
+        comp_pile_image.image = comp_back
+
         # Change the image on the slap pile
         card_photo = PhotoImage(file='cards\\' + slap_pile[-1].lower() + '.png').zoom(card_img_multiplier, card_img_multiplier)
         slap_top_image.configure(image=card_photo)
@@ -313,8 +346,8 @@ def deal_card(player):
                 info.config(text=message)
             is_slappable = True
             was_slappable = True
-            # Make the computer slap quicker when the difficulty is harder
-            time = 0.1*((-1 * difficulty) + 5) + 1
+            # Make the computer slap quicker when the difficulty is harder with a bit of random variation
+            time = (0.1*((-1 * difficulty) + 5) + 1) + (random.randint(-4, 4)/16)
             root.after(int(time * 1000), lambda: slap(False))
         # Change the global turn variable and adjust chances
         set_chances(slap_pile[-1])
@@ -345,10 +378,6 @@ def create_the_gui():
     title.destroy()
     instructions.destroy()
     understood.destroy()
-
-    # Images for the card back and front
-    back_photo = PhotoImage(file='back.png').subsample(back_img_multiplier, back_img_multiplier)
-    card_photo = PhotoImage(file='placeholder.png').zoom(card_img_multiplier, card_img_multiplier)
 
     comp_pile_image.grid(column=0, row=0, rowspan=2)
     slap_top_image.grid(column=1, row=1, rowspan=2)
@@ -415,7 +444,8 @@ understood.grid(row=9, column=2)
 Elements to appear on GUI after the user indicates that the understand the rules of the game
 '''
 # Images for the card back and front
-back_photo = PhotoImage(file='back.png').subsample(back_img_multiplier, back_img_multiplier)
+back_photo = PhotoImage(file='back-thick.png').subsample(back_img_multiplier, back_img_multiplier)
+
 card_photo = PhotoImage(file='placeholder.png').zoom(card_img_multiplier, card_img_multiplier)
 # Label for the comp pile
 comp_pile_image = Label(root, image=back_photo)
